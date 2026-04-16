@@ -93,3 +93,16 @@ def test_format_color_disabled_no_escape_codes():
     )
     out = format_env_result(r, color=False)
     assert "\033[" not in out
+
+
+def test_format_shows_command():
+    """The formatted output should include the cron command when present."""
+    r = _result(
+        expr="30 6 * * *",
+        command="/usr/bin/backup.sh",
+        referenced=[],
+        defined=[],
+        missing=[],
+    )
+    out = format_env_result(r, color=False)
+    assert "/usr/bin/backup.sh" in out
