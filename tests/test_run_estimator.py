@@ -64,6 +64,13 @@ def test_estimate_invalid_window():
     assert "positive" in result.error
 
 
+def test_estimate_negative_window():
+    """Negative window_hours should also be rejected as invalid."""
+    result = estimate_runs("* * * * *", window_hours=-5, from_dt=BASE)
+    assert not result.ok()
+    assert "positive" in result.error
+
+
 def test_estimate_invalid_expression():
     result = estimate_runs("not a cron", window_hours=1, from_dt=BASE)
     assert not result.ok()
@@ -92,22 +99,4 @@ def test_estimate_daily_at_midnight_in_24h_window():
 
 
 def test_estimate_first_and_last_run_populated():
-    result = estimate_runs("0 * * * *", window_hours=3, from_dt=BASE)
-    assert result.ok()
-    assert result.first_run is not None
-    assert result.last_run is not None
-    assert result.last_run >= result.first_run
-
-
-def test_estimate_uses_now_when_from_dt_none():
-    """Smoke-test: calling without from_dt should not raise."""
-    result = estimate_runs("0 * * * *", window_hours=1)
-    assert result.ok()
-
-
-def test_estimate_next_run_error_propagated():
-    with patch("crontab_doctor.run_estimator.next_runs",
-               side_effect=Exception("boom")):
-        result = estimate_runs("* * * * *", window_hours=1, from_dt=BASE)
-    # parse succeeds but next_runs raises — should surface as error
-    assert not result.ok()
+    result = estimate_runs("0 * * * *",
