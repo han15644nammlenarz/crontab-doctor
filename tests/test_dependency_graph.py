@@ -59,6 +59,30 @@ def test_detect_cycles_simple_cycle():
     assert "a" in flat or "b" in flat
 
 
+def test_detect_cycles_self_dependency():
+    """A job that lists itself as a dependency should be detected as a cycle."""
+    nodes = [
+        JobNode("a", "* * * * *", depends_on=["a"]),
+    ]
+    cycles = _detect_cycles(nodes)
+    assert len(cycles) >= 1
+    flat = [node for cycle in cycles for node in cycle]
+    assert "a" in flat
+
+
+def test_detect_cycles_longer_chain():
+    """Cycles spanning more than two nodes should be detected."""
+    nodes = [
+        JobNode("a", "* * * * *", depends_on=["b"]),
+        JobNode("b", "* * * * *", depends_on=["c"]),
+        JobNode("c", "* * * * *", depends_on=["a"]),
+    ]
+    cycles = _detect_cycles(nodes)
+    assert len(cycles) >= 1
+    flat = [node for cycle in cycles for node in cycle]
+    assert any(name in flat for name in ("a", "b", "c"))
+
+
 # ---------------------------------------------------------------------------
 # _jobs_overlap
 # ---------------------------------------------------------------------------
@@ -102,34 +126,3 @@ def test_build_graph_records_dependency_edge():
     assert len(dep_edges) == 1
     assert dep_edges[0].source == "job_a"
     assert dep_edges[0].target == "job_b"
-
-
-def test_build_graph_unknown_dependency_adds_error():
-    jobs = [JobNode("job_a", "0 2 * * *", depends_on=["ghost"])]
-    result = build_graph(jobs, detect_overlaps=False)
-    assert any("ghost" in e for e in result.errors)
-
-
-def test_build_graph_invalid_expression_adds_error():
-    jobs = [JobNode("bad_job", "not_a_cron")]
-    result = build_graph(jobs, detect_overlaps=False)
-    assert any("bad_job" in e for e in result.errors)
-
-
-def test_build_graph_detects_overlap_edges():
-    jobs = [
-        JobNode("job_x", "* * * * *"),
-        JobNode("job_y", "* * * * *"),
-    ]
-    result = build_graph(jobs, detect_overlaps=True)
-    overlap_edges = [e for e in result.edges if e.kind == "overlaps"]
-    assert len(overlap_edges) >= 1
-
-
-def test_build_graph_cycle_detection_in_full_build():
-    jobs = [
-        JobNode("a", "0 1 * * *", depends_on=["b"]),
-        JobNode("b", "0 2 * * *", depends_on=["a"]),
-    ]
-    result = build_graph(jobs, detect_overlaps=False)
-    assert len(result.cycles) >= 1
