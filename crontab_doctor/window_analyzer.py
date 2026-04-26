@@ -30,13 +30,28 @@ class WindowResult:
             f"in the next {span_minutes} minutes"
         )
 
+    def next_fire(self) -> Optional[datetime]:
+        """Return the earliest firing time within the window, or None if there are none."""
+        return self.fires[0] if self.fires else None
+
 
 def analyze_window(
     expression: str,
     window_minutes: int = 60,
     from_dt: Optional[datetime] = None,
 ) -> WindowResult:
-    """Return all firing times for *expression* within *window_minutes* from *from_dt*."""
+    """Return all firing times for *expression* within *window_minutes* from *from_dt*.
+
+    Args:
+        expression: A cron expression string (e.g. ``"*/5 * * * *"``).
+        window_minutes: Length of the look-ahead window in minutes.  Defaults to 60.
+        from_dt: Start of the window.  Defaults to the current minute (seconds and
+            microseconds zeroed out).
+
+    Returns:
+        A :class:`WindowResult` containing every scheduled firing time that falls
+        within ``[from_dt, from_dt + window_minutes)``.
+    """
     if from_dt is None:
         from_dt = datetime.now().replace(second=0, microsecond=0)
 
